@@ -1,17 +1,17 @@
-#!/bin/sh
+#!/bin/perl
 # Copyright (c) 2013, Michael Wallio
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions 
 # are met:
-#   * Redistributions of source code must retain the above copyright
+#   - Redistributions of source code must retain the above copyright
 #     notice, this list of conditions and the following disclaimer.
-#   * Redistributions in binary form must reproduce the above copyright
+#   - Redistributions in binary form must reproduce the above copyright
 #     notice, this list of conditions and the following disclaimer in 
 #     the documentation and/or other materials provided with the 
 #     distribution.
-#   * Neither the name of the <organization> nor the names of its 
+#   - Neither the name of ScaryRawr nor the names of its 
 #     contributors may be used to endorse or promote products derived 
 #     from this software without specific prior written permission.
 # 
@@ -19,7 +19,7 @@
 # "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
 # LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
 # FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL 
-# Michael Wallio BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+# ScaryRawr BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
 # SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
 # LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF 
 # USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
@@ -28,168 +28,95 @@
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
 # SUCH DAMAGE.
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+use strict;
+use warnings;
 
-VERSION_MAJOR=0
-VERSION_MINOR=1
-VERSION_PATCH=0
+use Env;
+use File::Basename;
+use FindBin '$Bin';
+use Getopt::Long;
 
-print_help()
+my $MAJOR = 0;
+my $MINOR = 2;
+my $PATCH = 0;
+
+sub get_licenses
 {
-  echo "Usage: $(basename ${0}) [OPTIONS]..."
-  echo -e "Add license header to file.\n"
-  echo " -f, --file <file>        specify the output file (optional)"
-  echo " -l, --license <license>  specify the license type (default newbsd)"
-  echo " -n, --name <owner>       specify the copyright owner"
-  echo " -o, --org <organization> specify the orginization"
-  #echo " -c, --comment <comment>  specify the comment pattern (optional)"
-  echo " -h, --help               display this help and exit"
-  echo " -v, --version            output version information and exit"
-  #echo -e "\nFile type is optional if extension is known."
-  exit
+  my @licenses;
+  my $license_dir = "$Bin/license_files";
+  opendir(my $dh, $license_dir) or die $!;
+
+  while (my $file = readdir($dh)) {
+    next unless (-f "$license_dir/$file" and $file =~ m/\.lic$/);
+    $file =~ s/\.[^.]+$//;
+    push(@licenses, $file);
+  }
+
+  closedir($dh);
+
+  return @licenses;
 }
 
-print_version()
+sub print_version
 {
-  echo "$(basename ${0}) ${VERSION_MAJOR}.${VERSION_MINOR}"
-  echo -e "Written by Michael Wallio.\n"
-  echo -e "Copyright (C) 2013 ScaryRawr.\n"
-  echo "This is free software.  There is NO warranty."
-  exit
+  my $file_name = basename($0);
+  print "$file_name $MAJOR.$MINOR.$PATCH\n";
+  print "Written by Michael Wallio.\n\n";
+  print "Copyright (c) 2013 ScaryRawr.\n";
+  print "This is free software; see the source for license. There is NO ";
+  print "\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A \n";
+  print "PARTICULAR PURPOSE.\n";
+  exit 0;
 }
 
-print_available()
+sub print_help
 {
-  echo "Available Licenses:"
-  FILES="${SCRIPT_DIR}"/license_files/*.lic
-  for file in $FILES
-  do
-    file=${file##*/}
-    echo "  ${file%.lic}"
-  done
-  exit
+  my $file_name = basename($0);
+  print "Usage: $file_name [OPTIONS]...\n";
+  print " -f, --file <file>        specify the output file(s)\n";
+  print " -l, --license <license>  specify the license to use\n";
+  print " -n, --name <name>        specify the author's name\n";
+  print " -o, --org <organization> specify the organization\n";
+  print " -h, --help               display this help and exit\n";
+  print " -b, --version            output version information and exit\n";
+  exit 0;
 }
 
-if [ $# == 0 ]; then
-  print_help
-fi
+sub print_licenses
+{
+  print "Available Licenses:\n";
+  print "  $_\n" foreach (@_);
+  exit 0;
+}
 
-# Parse all arguments.
-for i; do
-  case "${i}" in
-  -f|--file )
-    FILE+=(${2})
-    shift ; shift
-    ;;
-#  -c|--comment )
-#    COMMENT=${2}
-#    shift ; shift
-#    ;;
-  -l|--license )
-    LICENSE=${2}
-    shift ; shift
-    ;;
-  -n|--name )
-    NAME=${2}
-    shift ; shift
-    ;;
-  -o|--org )
-    ORG=${2}
-    shift ; shift
-    ;;
-  -h|--help )
-    print_help
-    ;;
-  -v|--version )
-    print_version
-    ;;
-  -- ) shift; break ;;
-  esac
-done
+sub contains
+{
+  my ($listref, $find) = @_;
+  my @list = @$listref;
+  my %is_list = ();
+  $is_list{$_} = 1 foreach (@list);
+  return $is_list{$find};
+}
 
-LICENSE_FILE="${SCRIPT_DIR}"/license_files/"${LICENSE}".lic
-if [ -z "${LICENSE}" ] || [ ! -f ${LICENSE_FILE} ]; then
-  echo "Valid license not selected."
-  print_available
-fi
+my @files = ();
+my @licenses = get_licenses();
+my $get_version = '';
+my $get_help = '';
+my $license = '';
+my $name = $USERNAME;
+my $organization = $name;
 
-if [ -z "${NAME}" ]; then
-  if [ -n "${USERNAME}" ]; then
-    NAME=${USERNAME}
-  else
-    NAME=$(whoami)
-  fi
-fi
+GetOptions ('version' => \$get_version, 
+            'help' => \$get_help,
+            'license=s' => \$license,
+            'name=s' => \$name,
+            'organization=s' => \$organization,
+            'file=s{,}' => \@files);
 
-if [ -z "${ORG}" ]; then
-  ORG="<ORGANIZATION>"
-fi
 
-if [ -z "${FILE[@]}" ]; then
-  ( IFS=''
-    while read line
-    do
-      line=${line/<date>/$(date +"%Y")}
-      line=${line/<organization>/${ORG}}
-      echo ${line/<name>/${NAME}}
-    done < "${LICENSE_FILE}" )
-else
-  for file in ${FILE}
-  do
-    case ${file} in
-      *.h|*.hxx|*.hpp)
-        COMMENT='//'
-        HEADER=1
-        ;;
-      *.c|*.cc|*.cxx|*.cpp|*.cs|*.java|*.m )
-        COMMENT='//'
-        HEADER=0
-        ;;
-      * )
-        # Anything else is probably a script.
-        COMMENT='#'
-        HEADER=0
-        ;;
-    esac
+print_version() if ($get_version);
 
-    if [ -f "${file}" ]; then
-      if [ ! -w "${file}" ]; then
-        echo "Cannot write to file: ${file}"
-      fi
-      BACKUP=1
-    else
-      touch "${file}"
-      BACKUP=0
-    fi
+print_help() if ($get_help);
 
-    if [ ${BACKUP} -eq 1 ]; then
-      cp "${file}" "${file}".orig
-    fi
-
-    ( IFS=''
-      while read line
-      do
-        line=${line/<date>/$(date +"%Y")}
-        line=${line/<organization>/${ORG}}
-        echo "${COMMENT} ${line/<name>/${NAME}}" >> "temp.file"
-      done <"${LICENSE_FILE}" )
-
-      # Special for C and C++ headers...
-      if [ ${BACKUP} -eq 0 ] && [ ${HEADER} -eq 1 ]; then
-        echo "" >> "temp.file"
-        fullname=${file##*/}
-        filename=${fullname%.*}
-        fileext=${fullname##*.}
-        DEFGUARD=$(echo "${filename}_${fileext}_included" | tr [a-z] [A-Z])
-        echo "#ifndef ${DEFGUARD}" >> "temp.file"
-        echo "#define ${DEFGUARD}" >> "temp.file"
-        echo "" >> "temp.file"
-        echo "#endif" >> "temp.file"
-      fi
-
-    cat "${file}" >> "temp.file"
-    mv "temp.file" "${file}"
-
-  done
-fi
+print_licenses(@licenses) unless (contains(\@licenses, $license));
 
