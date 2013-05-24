@@ -120,7 +120,7 @@ sub sub_special
 
 sub get_comment
 {
-  if ($_[0] =~ m/\.(h|hpp|c|cc|cpp|cxx|C|H|java|cs)$/) {
+  if ($_[0] =~ m/\.(h|hpp|c|cc|cpp|cxx|C|H|java|js|cs)$/) {
     return "//";
   } elsif ($_[0] =~ m/\.(vb)$/) {
     return "'";
