@@ -131,7 +131,7 @@ sub get_comment
 
 sub do_new_file
 {
-  my $file = $_[0];
+  my $file = basename($_[0]);
 
   if ($file =~ m/\.(h|H|hpp)$/) {
     my $guard = uc($file);
