@@ -1,4 +1,4 @@
-#!/bin/perl
+#!/bin/env perl
 # Copyright (c) 2013, Michael Wallio
 # All rights reserved.
 # 
@@ -33,6 +33,7 @@ use warnings;
 
 use Env;
 use File::Basename;
+use File::Copy;
 use FindBin '$Bin';
 use Getopt::Long;
 
@@ -44,15 +45,15 @@ sub get_licenses
 {
   my @licenses;
   my $license_dir = "$Bin/license_files";
-  opendir(my $dh, $license_dir) or die $!;
 
-  while (my $file = readdir($dh)) {
+  opendir(DIRHANDLE, $license_dir) or die $!;
+  while (my $file = readdir(DIRHANDLE)) {
     next unless (-f "$license_dir/$file" and $file =~ m/\.lic$/);
     $file =~ s/\.[^.]+$//;
     push(@licenses, $file);
   }
 
-  closedir($dh);
+  closedir(DIRHANDLE);
 
   return @licenses;
 }
@@ -85,7 +86,7 @@ sub print_help
 sub print_licenses
 {
   print "Available Licenses:\n";
-  print "  $_\n" foreach (@_);
+  print "  $_\n" for (@_);
   exit 0;
 }
 
@@ -94,9 +95,40 @@ sub contains
   my ($listref, $find) = @_;
   my @list = @$listref;
   my %is_list = ();
-  $is_list{$_} = 1 foreach (@list);
+  $is_list{$_} = 1 for (@list);
   return $is_list{$find};
 }
+
+sub sub_special
+{
+  my $line = $_[0];
+  my $name = $_[1];
+  my $org  = $_[2];
+  my @months = qw( Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec );
+  my $month = $months[(localtime)[4]];
+  my $day  = (localtime)[3];
+  my $year = (localtime)[5] + 1900;
+
+  $line =~ s/<year>/$year/g;
+  $line =~ s/<month>/$month/g;
+  $line =~ s/<day>/$day/g;
+  $line =~ s/<name>/$name/g;
+  $line =~ s/<organization>/$org/g;
+
+  return $line;
+}
+
+sub get_comment
+{
+  if ($_[0] =~ m/\.(h|hpp|c|cc|cpp|cxx|C|H|java|cs)$/) {
+    return "//";
+  } elsif ($_[0] =~ m/\.(vb)$/) {
+    return "'";
+  }else {
+    return "#";
+  }
+}
+    
 
 my @files = ();
 my @licenses = get_licenses();
@@ -106,12 +138,12 @@ my $license = '';
 my $name = $USERNAME;
 my $organization = $name;
 
-GetOptions ('version' => \$get_version, 
-            'help' => \$get_help,
-            'license=s' => \$license,
-            'name=s' => \$name,
+GetOptions ('version'        => \$get_version, 
+            'help'           => \$get_help,
+            'license=s'      => \$license,
+            'name=s'         => \$name,
             'organization=s' => \$organization,
-            'file=s{,}' => \@files);
+            'file=s{,}'      => \@files);
 
 
 print_version() if ($get_version);
@@ -119,4 +151,42 @@ print_version() if ($get_version);
 print_help() if ($get_help);
 
 print_licenses(@licenses) unless (contains(\@licenses, $license));
+
+open(LICENSEFILE, "<$Bin/license_files/$license.lic");
+
+if (not @files) {
+  while (<LICENSEFILE>) {
+    print sub_special($_, $name, $organization);
+  }
+} else {
+  for (@files) {
+    my $curfile = $_;
+    if ( -r $curfile) {
+      move($curfile, "$curfile.orig");
+    }
+
+    my $comment = get_comment($curfile);
+
+    open(OUTFILE, ">$curfile");
+    # Move to the beginning of the license file.
+    seek(LICENSEFILE, 0, 0);
+    while (<LICENSEFILE>) {
+      print OUTFILE "$comment ";
+      print OUTFILE sub_special($_, $name, $organization);
+    }
+
+    if (-r "$curfile.orig") {
+      open(ORIGFILE, "<$curfile.orig");
+      while (<ORIGFILE>) {
+        print OUTFILE $_;
+      }
+
+      close(ORIGFILE);
+    }
+
+    close(OUTFILE);
+  }
+}
+
+close(LICENSEFILE);
 
