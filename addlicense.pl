@@ -79,7 +79,7 @@ sub print_help
   print " -n, --name <name>        specify the author's name\n";
   print " -o, --org <organization> specify the organization\n";
   print " -h, --help               display this help and exit\n";
-  print " -b, --version            output version information and exit\n";
+  print " -v, --version            output version information and exit\n";
   exit 0;
 }
 
@@ -104,6 +104,7 @@ sub sub_special
   my $line = $_[0];
   my $name = $_[1];
   my $org  = $_[2];
+  my $file = basename($_[3]);
   my @months = qw( Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec );
   my $month = $months[(localtime)[4]];
   my $day  = (localtime)[3];
@@ -197,7 +198,7 @@ open(LICENSEFILE, "<$Bin/license_files/$license.lic") or die $!;
 
 if (not @files) {
   while (<LICENSEFILE>) {
-    print sub_special($_, $name, $organization);
+    print sub_special($_, $name, $organization, "stdout");
   }
 } else {
   for (@files) {
@@ -213,7 +214,7 @@ if (not @files) {
     seek(LICENSEFILE, 0, 0);
     while (<LICENSEFILE>) {
       print OUTFILE "$comment ";
-      print OUTFILE sub_special($_, $name, $organization);
+      print OUTFILE sub_special($_, $name, $organizationm, $curfile);
     }
 
     print OUTFILE "\n";
