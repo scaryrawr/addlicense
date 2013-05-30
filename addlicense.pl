@@ -214,7 +214,7 @@ if (not @files) {
     seek(LICENSEFILE, 0, 0);
     while (<LICENSEFILE>) {
       print OUTFILE "$comment ";
-      print OUTFILE sub_special($_, $name, $organizationm, $curfile);
+      print OUTFILE sub_special($_, $name, $organization, $curfile);
     }
 
     print OUTFILE "\n";
