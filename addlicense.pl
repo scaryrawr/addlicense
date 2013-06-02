@@ -101,10 +101,8 @@ sub contains
 
 sub sub_special
 {
-  my $line = $_[0];
-  my $name = $_[1];
-  my $org  = $_[2];
-  my $file = basename($_[3]);
+  my ($line, $name, $org, $file) = @_;
+  $file = basename($file);
   my @months = qw( Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec );
   my $month = $months[(localtime)[4]];
   my $day  = (localtime)[3];
@@ -115,6 +113,7 @@ sub sub_special
   $line =~ s/<day>/$day/g;
   $line =~ s/<name>/$name/g;
   $line =~ s/<organization>/$org/g;
+  $line =~ s/\r\n/\n/g;
 
   return $line;
 }
@@ -132,28 +131,30 @@ sub get_comment
 
 sub do_new_file
 {
-  my $file = basename($_[0]);
+  my $file = $_[0];
 
   if ($file =~ m/\.(h|H|hpp)$/) {
     my $guard = uc($file);
 
-    $guard =~ s/(-| |\.)/_/g;
+    $guard =~ s/(-| |\.|\\|\/)/_/g;
     # include guard
-    my $retval = "#ifndef $guard\n#define $guard\n\n";
-    $guard =~ s/_[A-Z]+$//;
+    my $retval = "#ifndef _${guard}_\n#define _${guard}_\n\n";
+    my $export = uc(basename($file));
+    $export =~ s/(-| |\.)/_/g;
+    $export =~ s/_[A-Z]+$//;
 
     # Export statements.
     $retval .= "#if defined(_WIN32) && !defined(__GNUC__)\n";
-    $retval .= "#  ifdef ${guard}_EXPORTS\n";
-    $retval .= "#      define ${guard}_EXPORT __declspec(dllexport)\n";
+    $retval .= "#  ifdef ${export}_EXPORTS\n";
+    $retval .= "#      define ${export}_EXPORT __declspec(dllexport)\n";
     $retval .= "#  else\n";
-    $retval .= "#      define ${guard}_EXPORT __declspec(dllimport)\n";
+    $retval .= "#      define ${export}_EXPORT __declspec(dllimport)\n";
     $retval .= "#  endif\n";
     $retval .= "#else\n";
     $retval .= "#  if __GNUC__ > 4\n";
-    $retval .= "#    define ${guard}_EXPORT __attribute__ ((visibility (\"default\")))\n";
+    $retval .= "#    define ${export}_EXPORT __attribute__ ((visibility (\"default\")))\n";
     $retval .= "#  else\n";
-    $retval .= "#    define ${guard}_EXPORT\n";
+    $retval .= "#    define ${export}_EXPORT\n";
     $retval .= "#  endif\n";
     $retval .= "#endif\n\n";
 
@@ -167,9 +168,14 @@ sub do_new_file
       $retval .= "#endif\n";
     }
 
-    return $retval . "\n#endif\n\n";
+    return $retval . "\n#endif // _${guard}_\n\n";
   }
 
+}
+
+sub has_copyright
+{
+  my ($file, $comment) = @_;
 }
 
 my @files = ();
@@ -222,6 +228,7 @@ if (not @files) {
     if (-r "$curfile.orig") {
       open(ORIGFILE, "<$curfile.orig") or die $!;
       while (<ORIGFILE>) {
+        $+ =~ s/\r\n/\n/g;
         print OUTFILE $_;
       }
 
@@ -232,6 +239,7 @@ if (not @files) {
     }
 
     close(OUTFILE);
+
   }
 }
 
