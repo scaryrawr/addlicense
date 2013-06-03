@@ -113,7 +113,6 @@ sub sub_special
   $line =~ s/<day>/$day/g;
   $line =~ s/<name>/$name/g;
   $line =~ s/<organization>/$org/g;
-  $line =~ s/\r\n/\n/g;
 
   return $line;
 }
@@ -137,8 +136,10 @@ sub do_new_file
     my $guard = uc($file);
 
     $guard =~ s/(-| |\.|\\|\/)/_/g;
+    $guard .= "_";
+    
     # include guard
-    my $retval = "#ifndef _${guard}_\n#define _${guard}_\n\n";
+    my $retval = "#ifndef ${guard}\n#define ${guard}\n\n";
     my $export = uc(basename($file));
     $export =~ s/(-| |\.)/_/g;
     $export =~ s/_[A-Z]+$//;
@@ -168,7 +169,7 @@ sub do_new_file
       $retval .= "#endif\n";
     }
 
-    return $retval . "\n#endif // _${guard}_\n\n";
+    return $retval . "\n#endif  // ${guard}\n\n";
   }
 
 }
@@ -200,7 +201,7 @@ print_help() if ($get_help);
 
 print_licenses(@licenses) unless (contains(\@licenses, $license));
 
-open(LICENSEFILE, "<$Bin/license_files/$license.lic") or die $!;
+open(LICENSEFILE, "<${Bin}/license_files/${license}.lic") or die $!;
 
 if (not @files) {
   while (<LICENSEFILE>) {
@@ -210,25 +211,27 @@ if (not @files) {
   for (@files) {
     my $curfile = $_;
     if ( -r $curfile) {
-      move($curfile, "$curfile.orig");
+      move($curfile, "${curfile}.orig");
     }
 
     my $comment = get_comment($curfile);
 
-    open(OUTFILE, ">$curfile") or die $!;
+    open(OUTFILE, ">${curfile}") or die $!;
     # Move to the beginning of the license file.
     seek(LICENSEFILE, 0, 0);
     while (<LICENSEFILE>) {
-      print OUTFILE "$comment ";
-      print OUTFILE sub_special($_, $name, $organization, $curfile);
+      my $out_line = "${comment} " . sub_special($_, $name, $organization, $curfile);
+      $out_line =~ s/\r\n/\n/g;
+      $out_line =~ s/\s+\n/\n/g;
+      print OUTFILE $out_line;
     }
 
     print OUTFILE "\n";
 
-    if (-r "$curfile.orig") {
-      open(ORIGFILE, "<$curfile.orig") or die $!;
+    if (-r "${curfile}.orig") {
+      open(ORIGFILE, "<${curfile}.orig") or die $!;
       while (<ORIGFILE>) {
-        $+ =~ s/\r\n/\n/g;
+        $_ =~ s/\r\n/\n/g;
         print OUTFILE $_;
       }
 
