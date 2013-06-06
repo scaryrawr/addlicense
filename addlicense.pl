@@ -34,6 +34,7 @@ use warnings;
 use Env;
 use File::Basename;
 use File::Copy;
+use File::Spec;
 use FindBin '$Bin';
 use Getopt::Long;
 
@@ -44,11 +45,12 @@ my $PATCH = 0;
 sub get_licenses
 {
   my @licenses;
-  my $license_dir = "$Bin/license_files";
+  my $license_dir = File::Spec->catpath(${Bin}, "license_files");
 
   opendir(DIRHANDLE, $license_dir) or die $!;
   while (my $file = readdir(DIRHANDLE)) {
-    next unless (-f "${license_dir}/${file}" and $file =~ m/\.lic$/);
+    my $file_path = File::Spec->catfile($license_dir, $file);
+    next unless (-f "${file_path}" and $file =~ m/\.lic$/);
     $file =~ s/\.[^.]+$//;
     push(@licenses, $file);
   }
@@ -64,8 +66,8 @@ sub print_version
   print "${file_name} ${MAJOR}.${MINOR}.${PATCH}\n";
   print "Written by Michael Wallio.\n\n";
   print "Copyright (c) 2013 ScaryRawr.\n";
-  print "This is free software; see the source for license. There is NO ";
-  print "\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A \n";
+  print "This is free software; see the source for license. There is NO\n";
+  print "warranty; not even for MERCHANTABILITY or FITNESS FOR A \n";
   print "PARTICULAR PURPOSE.\n";
   exit 0;
 }
@@ -174,11 +176,6 @@ sub do_new_file
 
 }
 
-sub has_copyright
-{
-  my ($file, $comment) = @_;
-}
-
 my @files = ();
 my @licenses = get_licenses();
 my $get_version = '';
@@ -201,7 +198,10 @@ print_help() if ($get_help);
 
 print_licenses(@licenses) unless (contains(\@licenses, $license));
 
-open(LICENSEFILE, "<${Bin}/license_files/${license}.lic") or die $!;
+my $license_path = File::Spec->catfile($Bin, 
+                                       "license_files",
+                                       "${license}.lic");
+open(LICENSEFILE, "<${license_path}") or die $!;
 
 if (not @files) {
   while (<LICENSEFILE>) {
@@ -232,6 +232,7 @@ if (not @files) {
       open(ORIGFILE, "<${curfile}.orig") or die $!;
       while (<ORIGFILE>) {
         $_ =~ s/\r\n/\n/g;
+        $_ =~ s/\s+\n/\n/g;
         print OUTFILE $_;
       }
 
