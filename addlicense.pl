@@ -45,9 +45,7 @@ my $PATCH = 0;
 sub get_licenses
 {
   my @licenses;
-  print "${Bin}\n";
   my $license_dir = File::Spec->catfile("${Bin}", "license_files");
-  print "${license_dir}\n";
   opendir(DIRHANDLE, $license_dir) or die $!;
   while (my $file = readdir(DIRHANDLE)) {
     my $file_path = File::Spec->catfile($license_dir, $file);
