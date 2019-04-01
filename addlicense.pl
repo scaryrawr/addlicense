@@ -133,7 +133,7 @@ sub do_new_file
 {
     my $file = $_[0];
 
-    if ($file =~ m/\.(h|H|hpp)$/) {
+    if ($file =~ m/\.(h|H|hpp|hxx)$/) {
         my $guard = uc($file);
 
         $guard =~ s/(-| |\.|\\|\/)/_/g;
@@ -180,7 +180,7 @@ my @licenses = get_licenses();
 my $get_version = '';
 my $get_help = '';
 my $license = '';
-my $name = `whoami`;
+(my $name = `whoami`) =~ s/\s+$//g;
 my $organization = $name;
 
 GetOptions(
