@@ -35,7 +35,7 @@ use Env;
 use File::Basename;
 use File::Copy;
 use File::Spec;
-use FindBin '$Bin';
+use FindBin '$RealBin';
 use Getopt::Long;
 
 my $MAJOR = 0;
@@ -45,7 +45,7 @@ my $PATCH = 0;
 sub get_licenses
 {
     my @licenses;
-    my $license_dir = File::Spec->catfile("${Bin}", "license_files");
+    my $license_dir = File::Spec->catfile("${RealBin}", "license_files");
     opendir(DIRHANDLE, $license_dir) or die $!;
     while (my $file = readdir(DIRHANDLE)) {
         my $file_path = File::Spec->catfile($license_dir, $file);
@@ -198,7 +198,7 @@ print_help() if ($get_help);
 
 print_licenses(@licenses) unless (contains(\@licenses, $license));
 
-my $license_path = File::Spec->catfile($Bin, "license_files", "${license}.lic");
+my $license_path = File::Spec->catfile($RealBin, "license_files", "${license}.lic");
 open(LICENSEFILE, "<${license_path}") or die $!;
 
 if (not @files) {
